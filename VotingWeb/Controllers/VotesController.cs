@@ -1,4 +1,7 @@
-﻿namespace VotingWeb.Controllers
+﻿using Messages;
+using NServiceBus;
+
+namespace VotingWeb.Controllers
 {
     using System;
     using System.Collections.Generic;
@@ -52,6 +55,18 @@
 
                     result.AddRange(JsonConvert.DeserializeObject<List<KeyValuePair<string, int>>>(await response.Content.ReadAsStringAsync()));
                 }
+            }
+
+            var voteToCast = new CastVote();
+            voteToCast.Name = "Hello, world";
+
+            try
+            {
+                await VotingWeb.EndpointInstance.Send(voteToCast);
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
 
             return this.Json(result);
