@@ -53,7 +53,7 @@ namespace VotingWeb
                                     .UseUrls(url)
                                     .Build();
                             }), "Web Listener"),
-                new ServiceInstanceListener(serviceContext => new StatelessNServiceBusListener(serviceContext, this), "nServiceBus Listener"), 
+                new ServiceInstanceListener(serviceContext => new StatelessNServiceBusListener(serviceContext), "nServiceBus Listener"), 
             };
         }
 

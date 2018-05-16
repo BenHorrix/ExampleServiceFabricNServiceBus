@@ -1,27 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Description;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Messages;
+using Microsoft.ServiceFabric.Data;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Runtime;
 using NServiceBus;
 
-namespace VotingWeb.Listeners
+namespace VotingData.Listeners
 {
-    internal class StatelessNServiceBusListener : ICommunicationListener
+    public class StatefulNServiceBusListener : ICommunicationListener
     {
         private const string RabbitMqSettingsSectionName = "RabbitMQ";
         private const string RabbitMqConnectionStringSettingName = "RabbitMQConnectionString";
         private readonly string _rabbitConnectionString = null;
-        private readonly StatelessServiceContext _serviceContext;
+        private readonly StatefulServiceContext _serviceContext;
+        private EndpointConfiguration _endpointConfiguration;
 
-        public StatelessNServiceBusListener(StatelessServiceContext context)
+        public StatefulNServiceBusListener(StatefulServiceContext stateManager)
         {
-            _serviceContext = context ?? throw new ArgumentNullException(nameof(context));
+            this._serviceContext = stateManager;
 
-            var configurationPackage = context.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+            _serviceContext = stateManager ?? throw new ArgumentNullException(nameof(stateManager));
+
+            var configurationPackage = _serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
             ConfigurationSection rabbitMqConfigSection = configurationPackage.Settings.Sections[RabbitMqSettingsSectionName];
             ConfigurationProperty rabbitMqConnectionString = rabbitMqConfigSection.Parameters[RabbitMqConnectionStringSettingName];
@@ -47,26 +52,32 @@ namespace VotingWeb.Listeners
         public async Task<string> OpenAsync(CancellationToken cancellationToken)
         {
             string endpointName = "voting";
-            var endpointConfiguration = new EndpointConfiguration(endpointName);
-            endpointConfiguration.EnableInstallers();
+            _endpointConfiguration = new EndpointConfiguration(endpointName);
+            _endpointConfiguration.EnableInstallers();
 
-            var transport = endpointConfiguration.UseTransport<RabbitMQTransport>();
+            var transport = _endpointConfiguration.UseTransport<RabbitMQTransport>();
             transport.ConnectionString(_rabbitConnectionString);
             transport.UseConventionalRoutingTopology();
 
             var routing = transport.Routing();
             routing.RouteToEndpoint(typeof(CastVote).Assembly, endpointName);
 
-            VotingWeb.EndpointInstance = await Endpoint.Start(endpointConfiguration).ConfigureAwait(false);
+            VotingData.EndpointInstance = await Endpoint.Start(_endpointConfiguration).ConfigureAwait(false);
 
-            ServiceEventSource.Current.ServiceMessage(_serviceContext, $"The {nameof(StatelessNServiceBusListener)} has been instantiated");
+            ServiceEventSource.Current.ServiceMessage(_serviceContext, $"The {nameof(StatefulNServiceBusListener)} has been instantiated");
 
             return endpointName;
         }
 
+        public async Task RunAsync()
+        {
+            VotingData.EndpointInstance = await Endpoint.Start(_endpointConfiguration)
+                .ConfigureAwait(false);
+        }
+
         public Task CloseAsync(CancellationToken cancellationToken)
         {
-            return VotingWeb.EndpointInstance?.Stop();
+            return VotingData.EndpointInstance?.Stop();
         }
 
         public void Abort()

@@ -11,6 +11,8 @@ using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using Microsoft.ServiceFabric.Data;
+using NServiceBus;
+using VotingData.Listeners;
 
 namespace VotingData
 {
@@ -19,6 +21,8 @@ namespace VotingData
     /// </summary>
     internal sealed class VotingData : StatefulService
     {
+        public static IEndpointInstance EndpointInstance = null;
+
         public VotingData(StatefulServiceContext context)
             : base(context)
         { }
@@ -47,7 +51,7 @@ namespace VotingData
                                     .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.UseUniqueServiceUrl)
                                     .UseUrls(url)
                                     .Build();
-                    }))
+                    }), "Web Listener"), new ServiceReplicaListener(serviceContext => new StatefulNServiceBusListener(serviceContext), "Rabbit MQ Listener") 
             };
         }
     }

@@ -22,10 +22,12 @@ namespace VotingWeb.Controllers
         private readonly HttpClient httpClient;
         private readonly FabricClient fabricClient;
         private readonly StatelessServiceContext serviceContext;
+        private readonly IEndpointInstance endpointInstance;
 
-        public VotesController(HttpClient httpClient, StatelessServiceContext context, FabricClient fabricClient)
+        public VotesController(HttpClient httpClient, StatelessServiceContext context, FabricClient fabricClient, IEndpointInstance endpointInstance)
         {
             this.fabricClient = fabricClient;
+            this.endpointInstance = endpointInstance;
             this.httpClient = httpClient;
             this.serviceContext = context;
         }
@@ -62,7 +64,7 @@ namespace VotingWeb.Controllers
 
             try
             {
-                await VotingWeb.EndpointInstance.Send(voteToCast);
+                await endpointInstance.Send(voteToCast);
             }
             catch (Exception ex)
             {
